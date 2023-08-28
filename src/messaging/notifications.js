@@ -47,7 +47,7 @@ function default_1(Messaging) {
             fromUid: fromUid,
             message: messageObj,
             uids: uids,
-            self: 0, // Add the self property here
+            self: 0,
         };
         data = yield plugins.hooks.fire('filter:messaging.notify', data);
         if (!data || !data.uids || !data.uids.length) {
@@ -55,7 +55,6 @@ function default_1(Messaging) {
         }
         uids = data.uids;
         uids.forEach((uid) => {
-            // Rest of your loop code
         });
         if (messageObj.system) {
             return;

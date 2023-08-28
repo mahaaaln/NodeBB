@@ -31,7 +31,7 @@ export default function (Messaging: any): void {
             fromUid: fromUid,
             message: messageObj,
             uids: uids,
-            self: 0, // Add the self property here
+            self: 0, 
         };
         data = await plugins.hooks.fire('filter:messaging.notify', data);
         if (!data || !data.uids || !data.uids.length) {
@@ -40,7 +40,7 @@ export default function (Messaging: any): void {
     
         uids = data.uids;
         uids.forEach((uid) => {
-            // Rest of your loop code
+            
         });
         if (messageObj.system) {
             return;
@@ -53,9 +53,7 @@ export default function (Messaging: any): void {
         } else {
             queueObj = {
                 message: messageObj,
-                timeout: setTimeout(() => {
-                    // Empty function, just to fulfill the type requirement
-                }, 0), // Initialize the timeout property
+                timeout: undefined,
             };
             Messaging.notifyQueue[`${fromUid}:${roomId}`] = queueObj;
         }
