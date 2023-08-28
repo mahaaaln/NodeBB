@@ -68,13 +68,11 @@ function default_1(Messaging) {
         else {
             queueObj = {
                 message: messageObj,
-                timeout: setTimeout(() => {
-                    // Empty function, just to fulfill the type requirement
-                }, 0), // Initialize the timeout property
+                timeout: undefined,
             };
             Messaging.notifyQueue[`${fromUid}:${roomId}`] = queueObj;
         }
-        clearTimeout(queueObj.timeout);
+        // clearTimeout(queueObj.timeout);
         queueObj.timeout = setTimeout(() => __awaiter(this, void 0, void 0, function* () {
             try {
                 yield sendNotifications(fromUid, uids, roomId, queueObj.message);

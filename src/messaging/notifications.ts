@@ -58,7 +58,7 @@ export default function (Messaging: any): void {
             Messaging.notifyQueue[`${fromUid}:${roomId}`] = queueObj;
         }
     
-        clearTimeout(queueObj.timeout);
+       // clearTimeout(queueObj.timeout);
         queueObj.timeout = setTimeout(async () => {
             try {
                 await sendNotifications(fromUid, uids, roomId, queueObj.message);
