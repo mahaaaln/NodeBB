@@ -35,6 +35,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const winston = __importStar(require("winston"));
 const user = __importStar(require("../user"));
 const notifications = __importStar(require("../notifications"));
+const sockets = __importStar(require("../socket.io"));
 const plugins = __importStar(require("../plugins"));
 const meta = __importStar(require("../meta"));
 function default_1(Messaging) {
@@ -63,6 +64,11 @@ function default_1(Messaging) {
         uids = data.uids;
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
         uids.forEach((uid) => {
+            data.self = parseInt(uid, 10) === parseInt(fromUid, 10) ? 1 : 0;
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+            Messaging.pushUnreadCount(uid);
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+            sockets.in(`uid_${uid}`).emit('event:chats.receive', data);
         });
         if (messageObj.system) {
             return;
@@ -87,22 +93,22 @@ function default_1(Messaging) {
         function sendNotifications(fromUid, uids, roomId, message) {
             // ...
         }
-        queueObj.timeout = setTimeout(() => __awaiter(this, void 0, void 0, function* () {
+        queueObj.timeout = setTimeout(() => {
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
             try {
-                yield sendNotifications(fromUid, uids, roomId, queueObj.message);
+                sendNotifications(fromUid, uids, roomId, queueObj.message);
             }
             catch (err) {
                 /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-                winston.error(`[messaging/notifications] Unabled to send notification\n${err.stack}`);
+                winston.error(`[messaging/notifications] Unabled to send notification\n${err.stack.toString()}: string`);
             }
-        }), 
+        }, 
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
         meta.config.notificationSendDelay * 1000);
     });
     function sendNotifications(fromuid, uids, roomId, messageObj) {
         return __awaiter(this, void 0, void 0, function* () {
-            const isOnline = yield user.isOnline(uids);
+            const isOnline = (yield user.isOnline(uids));
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
             uids = uids.filter((uid, index) => !isOnline[index] &&
                 parseInt(fromuid.toString(), 10) !== parseInt(uid.toString(), 10));

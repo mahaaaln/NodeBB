@@ -25,15 +25,15 @@ export default function (Messaging: any): void {
 
     /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     Messaging.notifyUsersInRoom = async (
-        fromUid: number,
+        fromUid: string,
         roomId: number,
         messageObj: MessageObject,
-        uids: number[]
+        uids: string[]
     ):Promise<void> => {
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        uids = (await Messaging.getUidsInRoom(roomId, 0, -1)) as number[];
+        uids = (await Messaging.getUidsInRoom(roomId, 0, -1)) as string[];
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        uids = (await user.blocks.filterUids(fromUid, uids)) as number[];
+        uids = (await user.blocks.filterUids(fromUid, uids)) as string[];
         let data = {
             roomId: roomId,
             fromUid: fromUid,
@@ -45,9 +45,9 @@ export default function (Messaging: any): void {
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
         data = await plugins.hooks.fire('filter:messaging.notify', data) as {
             roomId: number;
-            fromUid: number;
+            fromUid: string;
             message: MessageObject;
-            uids: number[];
+            uids: string[];
             self: number;
           };
         if (!data || !data.uids || !data.uids.length) {
@@ -57,6 +57,11 @@ export default function (Messaging: any): void {
         uids = data.uids;
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
         uids.forEach((uid) => {
+            data.self = parseInt(uid, 10) === parseInt(fromUid, 10) ? 1 : 0;
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+            Messaging.pushUnreadCount(uid) as void;
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+            sockets.in(`uid_${uid}`).emit('event:chats.receive', data);
         });
         if (messageObj.system) {
             return;
@@ -80,13 +85,13 @@ export default function (Messaging: any): void {
         function sendNotifications(fromUid, uids, roomId, message) {
             // ...
         }
-        queueObj.timeout = setTimeout(async () => {
+        queueObj.timeout = setTimeout(() => {
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
             try {
-                await sendNotifications(fromUid, uids, roomId, queueObj.message);
+                sendNotifications(fromUid, uids, roomId, queueObj.message);
             } catch (err) {
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-                winston.error(`[messaging/notifications] Unabled to send notification\n${err.stack}`);
+                winston.error(`[messaging/notifications] Unabled to send notification\n${err.stack.toString()}: string`);
             }
         },
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
@@ -94,11 +99,11 @@ export default function (Messaging: any): void {
     };
     async function sendNotifications(
         fromuid: number,
-        uids: number[],
+        uids: string[],
         roomId: number,
         messageObj: MessageObject
     ): Promise<void> {
-        const isOnline = await user.isOnline(uids) as boolean[];
+        const isOnline = (await user.isOnline(uids)) as boolean[];
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
         uids = uids.filter((uid, index) => !isOnline[index] &&
         parseInt(fromuid.toString(), 10) !== parseInt(uid.toString(), 10));
