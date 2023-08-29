@@ -24,21 +24,32 @@ export default function (Messaging: any): void {
     Messaging.notifyQueue = {}; // Only used to notify a user of a new chat message, see Messaging.notifyUser
 
     /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-    Messaging.notifyUsersInRoom = async (fromUid: number, roomId: number, messageObj: MessageObject): Promise<void> => {
+    Messaging.notifyUsersInRoom = async (
+        fromUid: number,
+        roomId: number,
+        messageObj: MessageObject,
+        uids: number[]
+    ):Promise<void> => {
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        let uids = await Messaging.getUidsInRoom(roomId, 0, -1);
+        uids = (await Messaging.getUidsInRoom(roomId, 0, -1)) as number[];
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        uids = await user.blocks.filterUids(fromUid, uids); 
+        uids = (await user.blocks.filterUids(fromUid, uids)) as number[];
         let data = {
             roomId: roomId,
             fromUid: fromUid,
             message: messageObj,
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
             uids: uids,
-            self: 0, 
+            self: 0,
         };
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        data = await plugins.hooks.fire('filter:messaging.notify', data);
+        data = await plugins.hooks.fire('filter:messaging.notify', data) as {
+            roomId: number;
+            fromUid: number;
+            message: MessageObject;
+            uids: number[];
+            self: number;
+          };
         if (!data || !data.uids || !data.uids.length) {
             return;
         }
@@ -46,15 +57,13 @@ export default function (Messaging: any): void {
         uids = data.uids;
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
         uids.forEach((uid) => {
-            
         });
         if (messageObj.system) {
             return;
         }
-        
         // Delayed notifications
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        let queueObj: QueueObject = Messaging.notifyQueue[`${fromUid}:${roomId}`];
+        let queueObj: QueueObject = Messaging.notifyQueue[`${fromUid}:${roomId}`] as QueueObject;
         if (queueObj) {
             queueObj.message.content += `\n${messageObj.content}`;
             clearTimeout(queueObj.timeout);
@@ -67,33 +76,40 @@ export default function (Messaging: any): void {
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
             Messaging.notifyQueue[`${fromUid}:${roomId}`] = queueObj;
         }
-    
-       // clearTimeout(queueObj.timeout);
+        // clearTimeout(queueObj.timeout);
+        function sendNotifications(fromUid, uids, roomId, message) {
+            // ...
+        }
         queueObj.timeout = setTimeout(async () => {
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
             try {
                 await sendNotifications(fromUid, uids, roomId, queueObj.message);
             } catch (err) {
-                /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
                 winston.error(`[messaging/notifications] Unabled to send notification\n${err.stack}`);
             }
-        }, 
+        },
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
         meta.config.notificationSendDelay * 1000);
     };
-    
-    async function sendNotifications(fromuid: number, uids: number[], roomId: number, messageObj: MessageObject): Promise<void> {
-        const isOnline = await user.isOnline(uids);
+    async function sendNotifications(
+        fromuid: number,
+        uids: number[],
+        roomId: number,
+        messageObj: MessageObject
+    ): Promise<void> {
+        const isOnline = await user.isOnline(uids) as boolean[];
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        uids = uids.filter((uid, index) => !isOnline[index] && parseInt(fromuid.toString(), 10) !== parseInt(uid.toString(), 10));
+        uids = uids.filter((uid, index) => !isOnline[index] &&
+        parseInt(fromuid.toString(), 10) !== parseInt(uid.toString(), 10));
         if (!uids.length) {
             return;
         }
 
         const { displayname } = messageObj.fromUser;
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        const isGroupChat = await Messaging.isGroupChat(roomId);
-        const notification = await notifications.create({
+        const isGroupChat: boolean = await Messaging.isGroupChat(roomId) as boolean;
+        const notification: Notification = await notifications.create({
             type: isGroupChat ? 'new-group-chat' : 'new-chat',
             subject: `[[email:notif.chat.subject, ${displayname}]]`,
             bodyShort: `[[notifications:new_message_from, ${displayname}]]`,
@@ -101,7 +117,7 @@ export default function (Messaging: any): void {
             nid: `chat_${fromuid}_${roomId}`,
             from: fromuid,
             path: `/chats/${messageObj.roomid}`,
-        });
+        }) as Notification;
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
         delete Messaging.notifyQueue[`${fromuid}:${roomId}`];
         notifications.push(notification, uids);

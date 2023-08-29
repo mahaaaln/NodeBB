@@ -41,11 +41,11 @@ function default_1(Messaging) {
     /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     Messaging.notifyQueue = {}; // Only used to notify a user of a new chat message, see Messaging.notifyUser
     /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-    Messaging.notifyUsersInRoom = (fromUid, roomId, messageObj) => __awaiter(this, void 0, void 0, function* () {
+    Messaging.notifyUsersInRoom = (fromUid, roomId, messageObj, uids) => __awaiter(this, void 0, void 0, function* () {
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        let uids = yield Messaging.getUidsInRoom(roomId, 0, -1);
+        uids = (yield Messaging.getUidsInRoom(roomId, 0, -1));
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        uids = yield user.blocks.filterUids(fromUid, uids);
+        uids = (yield user.blocks.filterUids(fromUid, uids));
         let data = {
             roomId: roomId,
             fromUid: fromUid,
@@ -55,7 +55,7 @@ function default_1(Messaging) {
             self: 0,
         };
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        data = yield plugins.hooks.fire('filter:messaging.notify', data);
+        data = (yield plugins.hooks.fire('filter:messaging.notify', data));
         if (!data || !data.uids || !data.uids.length) {
             return;
         }
@@ -84,6 +84,9 @@ function default_1(Messaging) {
             Messaging.notifyQueue[`${fromUid}:${roomId}`] = queueObj;
         }
         // clearTimeout(queueObj.timeout);
+        function sendNotifications(fromUid, uids, roomId, message) {
+            // ...
+        }
         queueObj.timeout = setTimeout(() => __awaiter(this, void 0, void 0, function* () {
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
             try {
@@ -101,7 +104,8 @@ function default_1(Messaging) {
         return __awaiter(this, void 0, void 0, function* () {
             const isOnline = yield user.isOnline(uids);
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-            uids = uids.filter((uid, index) => !isOnline[index] && parseInt(fromuid.toString(), 10) !== parseInt(uid.toString(), 10));
+            uids = uids.filter((uid, index) => !isOnline[index] &&
+                parseInt(fromuid.toString(), 10) !== parseInt(uid.toString(), 10));
             if (!uids.length) {
                 return;
             }
