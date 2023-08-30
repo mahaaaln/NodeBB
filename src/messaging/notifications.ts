@@ -82,49 +82,45 @@ export default function (Messaging: any): void {
             Messaging.notifyQueue[`${fromUid}:${roomId}`] = queueObj;
         }
         // clearTimeout(queueObj.timeout);
-        function sendNotifications(fromUid, uids, roomId, message) {
-            // ...
+        async function sendNotifications(
+            fromuid: string,
+            uids: string[],
+            roomId: number,
+            messageObj: MessageObject
+        ): Promise<void> {
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+            const isOnline = (await user.isOnline(uids)) as boolean[];
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+            uids = uids.filter((uid, index) => !isOnline[index] &&
+            parseInt(fromuid.toString(), 10) !== parseInt(uid.toString(), 10));
+            if (!uids.length) {
+                return;
+            }
+            const { displayname } = messageObj.fromUser;
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+            const isGroupChat: boolean = await Messaging.isGroupChat(roomId) as boolean;
+            const notification: Notification = await notifications.create({
+                type: isGroupChat ? 'new-group-chat' : 'new-chat',
+                subject: `[[email:notif.chat.subject, ${displayname}]]`,
+                bodyShort: `[[notifications:new_message_from, ${displayname}]]`,
+                bodyLong: messageObj.content,
+                nid: `chat_${fromuid}_${roomId}`,
+                from: fromuid,
+                path: `/chats/${messageObj.roomid}`,
+            }) as Notification;
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+            delete Messaging.notifyQueue[`${fromuid}:${roomId}`];
+            await notifications.push(notification, uids);
         }
         queueObj.timeout = setTimeout(() => {
-            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-            try {
-                sendNotifications(fromUid, uids, roomId, queueObj.message);
-            } catch (err) {
-            /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-                winston.error(`[messaging/notifications] Unabled to send notification\n${err.stack.toString()}: string`);
-            }
+            sendNotifications(fromUid, uids, roomId, queueObj.message)
+                .catch((err) => {
+                    /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,
+                    @typescript-eslint/no-unsafe-call */
+                    winston.error(`[messaging/notifications] Unable to send notification\n${(err as Error).stack.toString()}`);
+                });
         },
         /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
         meta.config.notificationSendDelay * 1000);
     };
-    async function sendNotifications(
-        fromuid: number,
-        uids: string[],
-        roomId: number,
-        messageObj: MessageObject
-    ): Promise<void> {
-        const isOnline = (await user.isOnline(uids)) as boolean[];
-        /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        uids = uids.filter((uid, index) => !isOnline[index] &&
-        parseInt(fromuid.toString(), 10) !== parseInt(uid.toString(), 10));
-        if (!uids.length) {
-            return;
-        }
-
-        const { displayname } = messageObj.fromUser;
-        /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        const isGroupChat: boolean = await Messaging.isGroupChat(roomId) as boolean;
-        const notification: Notification = await notifications.create({
-            type: isGroupChat ? 'new-group-chat' : 'new-chat',
-            subject: `[[email:notif.chat.subject, ${displayname}]]`,
-            bodyShort: `[[notifications:new_message_from, ${displayname}]]`,
-            bodyLong: messageObj.content,
-            nid: `chat_${fromuid}_${roomId}`,
-            from: fromuid,
-            path: `/chats/${messageObj.roomid}`,
-        }) as Notification;
-        /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-        delete Messaging.notifyQueue[`${fromuid}:${roomId}`];
-        notifications.push(notification, uids);
-    }
 }
